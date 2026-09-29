@@ -8,24 +8,78 @@ toggle is top-right — so you can compare the two engines on identical input.
 
 ```sh
 cd ~/workspace/soi-geojson/web
-npm install          # first time only
-uv run ../build_web_data.py    # generates public/data from the full-resolution GeoJSON
+npm install                  # first time only
+uv run ../build_web_data.py  # generates public/data from the full-resolution GeoJSON
 npm run dev
 ```
 
-`build_web_data.py` must be run before `npm run dev` — the app fetches `public/data/index.json`
-on load and has nothing to show without it.
+`build_web_data.py` must be run before `npm run dev` — the app fetches
+`public/data/index.json` on load and has nothing to show without it.
 
-## What it does
+## Interaction
 
-- **Filter** states and districts by typing; the box is scoped to the level you are viewing and
-  clears when the level changes.
-- **Drill down**: India → a state → a district, with breadcrumb navigation that jumps straight to
-  a level rather than stepping back one step at a time.
-- **Disputed districts**: the 28 cross-border parcels, drawn as dashed red outlines, on request.
-- Districts with no sub-district geometry in the source (27 in Arunachal Pradesh, 12 in Meghalaya)
-  are shown but disabled, with the reason in the tooltip.
-- The viewport frames the most specific layer loaded.
+- **Tree** on the left: State > District > Sub-district, with connector rules. Clicking a node
+  loads and frames that level.
+- **Click on the map works too** — a state, district or sub-district polygon drills down through
+  exactly the same reducer as the tree.
+- **Hover** any polygon to see its name. Three checkboxes turn on permanent labels for states,
+  districts and sub-districts independently.
+- **Every polygon is categorically coloured** at each level: distinct hue per polygon, ancestors
+  desaturate to grey, and the state in focus keeps a strong outline behind its own districts.
+- **Selecting one sub-district frames the whole district**, not just that polygon, so its siblings
+  stay visible for comparison.
+- **Breadcrumb** shows the full path with every ancestor clickable, plus an explicit "up".
+- **Filter** matches anywhere in the branch — typing a sub-district name still surfaces its
+  district and state. The list is scoped to the selected state, so the branch in focus is what you
+  see.
+
+Districts with no sub-district geometry in the source (27 in Arunachal Pradesh, 12 in Meghalaya)
+are shown but disabled, with the reason in the tooltip.
+
+## Basemaps
+
+Pick from the dropdown, top-right. Thirteen providers are declared in
+`src/config/basemaps.js`; one needing an API key you have not supplied is simply not offered, so
+the list never shows a layer that would 401.
+
+Keys live in `web/.env` (git-ignored):
+
+```sh
+cp .env.example .env      # fill in VITE_STADIA_API_KEY / VITE_MAPBOX_TOKEN
+```
+
+Vite inlines `VITE_*` variables into the client bundle, so a key set there is visible to anyone
+who loads the page. That is expected for these services — restrict the key by HTTP referrer in
+the provider's dashboard, and never put a server-side secret there.
+
+## Structure
+
+```
+src/
+  state/
+    selection.js    useSelection() — the India > State > District > Sub-district
+                    state machine. Knows nothing about any map library.
+    filters.js      pure tree filtering and counts over index.json
+    layers.js       buildLayers()/buildLegend() — pure functions from
+                    (level + data + options) to render-agnostic descriptors
+  config/
+    basemaps.js     provider registry + URL expansion for each engine
+    palette.js      categorical hues (golden-angle spread)
+  components/
+    Sidebar.jsx         tree, breadcrumb, filter — presentation only
+    MapView.jsx         Leaflet renderer
+    MapViewOL.jsx       OpenLayers renderer
+    ErrorBoundary.jsx   keeps a panel failure from blanking the app
+  hooks/useGeoJson.js   fetch + keep-previous-value loading
+```
+
+Layer descriptors carry **intent** (`kind`, `categorical`, `style`, `labels`, `emphasis`, `focus`,
+`onClick`, `nameKey`), never engine objects. Leaflet and OpenLayers each interpret the same
+descriptor, and `buildLayers` can be asserted on without a browser. Style overrides are written in
+Leaflet's vocabulary (`weight`, `fillOpacity`, `dashArray`); `MapViewOL` translates them.
+
+OpenLayers is `React.lazy`, so the main bundle is ~118 kB gzipped and the ~95 kB OL chunk loads
+only when someone actually switches to it.
 
 ## Data
 
@@ -36,6 +90,7 @@ on load and has nothing to show without it.
 | states.geojson | 35.4 MB | 0.5 MB |
 | districts/ | 119 MB | 6.3 MB |
 | subdistricts/ | 280 MB | 43.1 MB |
+| index.json | — | 408 KB |
 | **total** | **432 MB** | **49.9 MB** |
 
 Simplification is Douglas-Peucker at a tolerance tuned to the zoom each level is drawn at
@@ -44,37 +99,11 @@ Simplification is Douglas-Peucker at a tolerance tuned to the zoom each level is
 **Use the originals in `~/Downloads/soi_pan_india/geojson` for any analysis.** These files are
 display-only and are not topologically faithful.
 
-`index.json` holds the codes and names the filter UI needs, with no geometry, so it loads in one
-small request (83 KB) and the lists are usable before any map data arrives.
-
-## Layout
-
-```
-src/
-  App.jsx                    level/state machine, layer assembly, engine switch
-  components/
-    Sidebar.jsx              filter, breadcrumbs, lists
-    MapView.jsx              Leaflet (react-leaflet)
-    MapViewOL.jsx            OpenLayers (ol)
-  hooks/useGeoJson.js        fetch + keep-previous-value loading
-  styles.css
-```
-
-Both map components take the same `layers` prop — an array of
-`{ key, kind, data, style }` — and the same palette, so switching engines changes nothing but the
-renderer. Style overrides are written in Leaflet's vocabulary (`weight`, `fillOpacity`,
-`dashArray`); `MapViewOL` translates them to OpenLayers' `width` / alpha / `lineDash`.
-
-OpenLayers is loaded with `React.lazy`, so the main bundle is 116 kB gzipped and the 95 kB OL
-chunk is only fetched when someone actually switches to it.
+`index.json` holds the whole tree — 40 states, 780 coded districts, 6,639 sub-districts — as codes
+and names with no geometry, so the tree is usable before any map data arrives.
 
 ## Verified
 
-Against a live dev server, both engines, no console errors:
-
-- 40 state polygons at country level; legend and feature counts match the source
-- Kerala → 14 districts → Palakkad → 7 sub-districts, framing the selection at each step
-- Breadcrumb jumps India → state → district directly
-- 28 disputed districts render on toggle
-- `npm run build` clean; `npm run lint` reports 2 warnings, both `set-state-in-effect` for
-  deliberate state resets (filter on level change, data reset on path change)
+Live dev server, both engines, no console errors: country → Kerala → Palakkad → Chittur, with the
+tree, breadcrumb, label toggles, hover names, basemap switching and the error boundary all
+exercised. `npm run build` clean.

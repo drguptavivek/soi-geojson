@@ -76,7 +76,11 @@ def main():
     print(f"districts/          {dk:3} features  {dn/1048576:6.1f} MB")
 
     # --- sub-districts, one file per district ---
+    # Names are captured here so the app's State > District > Sub-district tree
+    # needs no extra request: the file name only encodes the district, not the
+    # sub-districts inside it.
     sn = sk = 0
+    sub_names = {}
     for state in sorted(os.listdir(sub_dir)):
         sdir = f"{sub_dir}/{state}"
         if not os.path.isdir(sdir):
@@ -88,6 +92,12 @@ def main():
                             f"{DST}/subdistricts/{state}/{fn}")
             sn += n
             sk += k
+            sub_names[f"subdistricts/{state}/{fn}"] = [
+                {"code": p.get("subdistrict_lgd", ""),
+                 "name": p.get("subdistrict_name", ""),
+                 "type": p.get("subdistrict_type", "")}
+                for p in props(f"{DST}/subdistricts/{state}/{fn}")
+            ]
     totals["subdistricts"] = sn
     print(f"subdistricts/       {sk:3} features  {sn/1048576:6.1f} MB")
 
@@ -111,9 +121,14 @@ def main():
         out = []
         for d in props(path) if os.path.exists(path) else []:
             key = d.get("district_lgd") or ""
-            out.append({"code": key, "name": d["district_name"],
-                        "subdistrict_files": by_code.get(key)
-                        or by_slug.get(d["district_name"]) or []})
+            files = (by_code.get(key) or by_slug.get(d["district_name"]) or [])
+            subs = sub_names.get(files[0], []) if files else []
+            out.append({
+                "code": key,
+                "name": d["district_name"],
+                "subdistrict_files": files,
+                "subdistricts": subs,
+            })
         return out
 
     # code -> district-file stem, ignoring the _disputed bucket

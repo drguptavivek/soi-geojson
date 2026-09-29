@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# API keys for basemap providers -- never commit these
+.env
+.env.local
+.env.*.local
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
