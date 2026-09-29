@@ -9,12 +9,12 @@ toggle is top-right — so you can compare the two engines on identical input.
 ```sh
 cd ~/workspace/soi-geojson/web
 npm install                  # first time only
-uv run ../build_web_data.py  # generates public/data from the full-resolution GeoJSON
 npm run dev
 ```
 
-`build_web_data.py` must be run before `npm run dev` — the app fetches
-`public/data/index.json` on load and has nothing to show without it.
+Both the full-resolution `../geojson/` and browser-sized `public/data/` GeoJSON are committed,
+so the app runs without a data-generation step. When refreshing from the source shapefiles and
+LGD workbook, run `uv run ../build_geojson.py` followed by `uv run ../build_web_data.py`.
 
 ## Interaction
 

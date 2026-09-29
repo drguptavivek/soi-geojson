@@ -2,13 +2,14 @@
 """
 Generate browser-sized copies of the GeoJSON outputs for the React map.
 
-Reads the already-corrected files in ~/Downloads/soi_pan_india/geojson and writes
-simplified, lower-precision copies to web/public/data, plus an index.json holding
-the code/name metadata the filter UI needs (no geometry, so it loads instantly).
+Reads the tracked, full-resolution files in the repository's geojson/ directory
+and writes simplified, lower-precision copies to web/public/data, plus an
+index.json holding the code/name metadata the filter UI needs (no geometry, so
+it loads instantly).
 
 The full-resolution output is 435 MB and the state layer alone is 35 MB -- far too
 heavy for a browser. Simplification is display-only: these files are for the map,
-not for analysis. Use the originals in ~/Downloads/soi_pan_india/geojson for that.
+not for analysis. Use geojson/ for full-resolution analysis.
 
     uv run build_web_data.py
 """
@@ -19,8 +20,9 @@ import shutil
 import geopandas as gpd
 import shapely
 
-SRC = "/Users/vivekgupta/Downloads/soi_pan_india/geojson"
-DST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "public", "data")
+ROOT = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(ROOT, "geojson")
+DST = os.path.join(ROOT, "web", "public", "data")
 
 # Douglas-Peucker tolerance in degrees, tuned to the zoom each level is drawn at
 # (~1.1 km, ~220 m, ~55 m respectively).

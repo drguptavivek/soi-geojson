@@ -3,10 +3,10 @@
 __pycache__/
 *.pyc
 
-# Generated data — 435 MB, rebuilt with `uv run build_geojson.py`
-# Output goes to ~/Downloads/soi_pan_india; web copies to web/public/data
-web/public/data/
+# Generated intermediate data (the GeoJSON outputs and browser copies are tracked).
 data/
+!web/public/data/
+!web/public/data/**
 
 # Node
 node_modules/

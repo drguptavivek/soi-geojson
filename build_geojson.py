@@ -6,7 +6,7 @@ Build GeoJSON + XLSX from the Survey of India PAN INDIA boundary shapefiles.
   geojson/districts/<STATE_LGD>_<STATE>.geojson             districts, one file per state
   geojson/subdistricts/<STATE_LGD>_<STATE>/<DIST_LGD>_<DIST>.geojson
   geojson/subdistricts/_unassigned/disputed_territories.geojson
-  xlsx/India_Admin_Codes.xlsx
+  ~/Downloads/soi_pan_india/xlsx/India_Admin_Codes.xlsx
 
 Source codes are inconsistently zero-padded (STATE_LGD '7' vs '07', DIST_LGD
 '31' vs '031'), so codes are normalised before every join. Source display names
@@ -21,10 +21,11 @@ import collections
 import geopandas as gpd
 import shapely
 
-SRC = "/Users/vivekgupta/Downloads/soi_pan_india/State_District_Subdistrict_PAN INDIA"
-OUT = "/Users/vivekgupta/Downloads/soi_pan_india"
-GJ = os.path.join(OUT, "geojson")
-XL = os.path.join(OUT, "xlsx")
+SOURCE_ROOT = "/Users/vivekgupta/Downloads/soi_pan_india"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(SOURCE_ROOT, "State_District_Subdistrict_PAN INDIA")
+GJ = os.path.join(PROJECT_ROOT, "geojson")
+XL = os.path.join(SOURCE_ROOT, "xlsx")
 
 # Corruption rule
 # ---------------
@@ -71,7 +72,7 @@ def repair(value):
 import glob as _glob
 import openpyxl
 
-LGD_FILES = sorted(_glob.glob(os.path.join(OUT, "All_Districtof_India_*.xlsx")))
+LGD_FILES = sorted(_glob.glob(os.path.join(SOURCE_ROOT, "All_Districtof_India_*.xlsx")))
 lgd_by_state_name, lgd_by_name = {}, {}
 
 if LGD_FILES:
@@ -359,7 +360,7 @@ audit("info", "CRS", f"reprojected to {CRS_OUT}",
       "source was LCC_WGS84 (Lambert Conformal Conic, false easting/northing "
       "4,000,000 m)")
 
-with open(f"{OUT}/data_quality.json", "w") as f:
+with open(os.path.join(SOURCE_ROOT, "data_quality.json"), "w") as f:
     json.dump({"audit": AUDIT,
                "counts": {"states": len(st), "districts": len(di),
                           "subdistricts": len(su),
