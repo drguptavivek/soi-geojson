@@ -66,8 +66,10 @@ export function buildLayers({
     if (districtLayer) {
       layers.push({
         key: 'districts', kind: 'districts', data: districtLayer,
-        style: { weight: 0.6, fillOpacity: 0.04, color: '#94a3b8' },
-        emphasis: { key: 'district_name', value: district?.name, color: '#334155', weight: 1.8, alpha: 0.08 },
+        // Sibling districts drop to near-invisible context, so the selected
+        // district's sub-districts are the only thing competing for attention.
+        style: { weight: 0.35, fillOpacity: 0.015, color: '#cbd5e1' },
+        emphasis: { key: 'district_name', value: district?.name, color: '#64748b', weight: 1.2, alpha: 0.05 },
         labels: !!labels.districts,
       })
     }
