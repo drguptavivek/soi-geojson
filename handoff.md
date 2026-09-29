@@ -7,24 +7,40 @@
 
 ## 1. Environment and how to run it
 
-No git repo and no remote exist for this work — `~/workspace/soi-geojson` and
-`~/Downloads/soi_pan_india` are plain directories. The only repo on the machine is the unrelated
-`~/workspace/fundus_img_xtract`. **Commit/push steps of the handoff protocol do not apply here**;
-do not initialise a repo without the owner asking.
+Git repo exists on `main` (`~/workspace/soi-geojson`). **No remote is configured** — the owner was
+asked and had not chosen one at the time of writing. The data output directory
+`~/Downloads/soi_pan_india` is deliberately outside the repo.
 
 ```sh
 cd ~/workspace/soi-geojson
-uv run build_geojson.py        # ~40-60 s; no install step, uv bootstraps .venv
+uv run build_geojson.py        # ~40 s; full-resolution output, no install step
+uv run build_web_data.py       # ~15 s; browser-sized copies into web/public/data
+cd web && npm run dev          # map app on http://localhost:5173
 ```
 
 `uv run` creates `.venv` and installs from `pyproject.toml` on first use (verified from a deleted
-`.venv`). `uv run -- python - <<'PY'` works for one-off inspection without a project script.
+`.venv`). `build_web_data.py` must run before `npm run dev` — the app has nothing to show without
+`web/public/data/index.json`.
 
 Rebuild clears `geojson/` and `xlsx/` before writing — **do not remove that**, output filenames
 embed district names, so a rename leaves stale files behind (this bit us once: 7,862 features
 instead of 7,515).
 
-## 2. Inputs
+## 2. The map app
+
+React + Vite in `web/`. Filters and drills down India → state → district → sub-district, and renders
+the same layer definition in either **Leaflet or OpenLayers** (toggle top-right). The owner chose
+React over a Svelte rewrite; `svelte-leaflet` maturity and the cost of re-verifying a working app
+decided it, not bundle size.
+
+OpenLayers is `React.lazy`, so the main bundle is 116 kB gzipped and the 95 kB OL chunk loads only
+on switch. Style overrides are written in Leaflet's vocabulary (`weight`, `fillOpacity`, `dashArray`)
+and `MapViewOL` translates them.
+
+`web/public/data/` is a **simplified, display-only** copy (432 MB → 50 MB; states 35.4 → 0.5 MB).
+Git-ignored. Analysis must use `~/Downloads/soi_pan_india/geojson`.
+
+## 3. Inputs
 
 | What | Where |
 |---|---|
@@ -39,7 +55,7 @@ Source RAR: 202,524,438 bytes, SHA-256 `b8325e5d9dd0f04a6663d775363fe38cd2f23bd9
 partial from a failed browser download produced a **full-size but corrupt** file, so always finish
 with `lsar -t` — size alone does not prove integrity.
 
-## 3. Verified state (re-checked 2026-09-29)
+## 4. Verified state (re-checked 2026-09-29)
 
 - 7,515 features written: 40 states, 808 districts (37 files), 6,667 sub-districts (741 files).
 - 0 corruption markers and 0 non-ASCII characters remaining in any output property.
@@ -47,25 +63,34 @@ with `lsar -t` — size alone does not prove integrity.
 - Build reports 267 rule repairs, 86 LGD spellings adopted and 3 manual corrections; identical
   after a clean-venv rebuild. `HOWRAH`, `KAMJONG` and `GHUMARWIN` confirmed present in the output.
 - All output geometry is valid and EPSG:4326.
+- Web copy: 40 states, 780 districts + 28 disputed, 6,667 sub-districts; every path in
+  `index.json` resolves to a file that exists.
+- Map app verified in a real browser on both engines, no console errors: 40 state polygons,
+  Kerala → 14 districts → Palakkad → 7 sub-districts, breadcrumb jumps levels, 28 disputed
+  districts render. `npm run build` clean; `npm run lint` has 2 `set-state-in-effect` warnings,
+  both deliberate state resets.
 
-## 4. Open decisions for the owner
+## 5. Open decisions for the owner
 
 1. **Licensing is unverified.** The RAR ships no licence/terms/credit file. A web search returned
    only noise. Must be confirmed with Survey of India before redistribution. README says so.
 2. **Should sub-district names get an LGD source?** The supplied workbook is district-level only.
    A sub-district-level LGD file would let the same rule + LGD + corrections treatment apply one
    level down. Sub-district names currently rest on the rule alone.
+3. **Should this repo get a GitHub remote?** One commit exists on `main`; nothing is pushed.
+   The owner has not chosen a visibility. Licence is unverified (item 1), which argues against
+   publishing publicly until that is settled.
 
 **Closed 2026-09-29** — the three name questions were answered by the owner and are now in the
 `CORRECTIONS` table in `build_geojson.py`, applied after the LGD step so they beat the workbook:
 `HAORA`→`HOWRAH` (WB 341), `KAMJANG`→`KAMJONG` (Manipur 670, per kamjong.nic.in),
 `GHURMWIN`→`GHUMARWIN` (Bilaspur, HP sub-division). Verified present in the output.
 
-## 5. Approved work not yet started
+## 6. Approved work not yet started
 
 None. Nothing has been queued with the owner.
 
-## 6. Standing caveats (still true)
+## 7. Standing caveats (still true)
 
 - The LGD workbook is a **different vintage** from the shapefiles and reuses the same district codes
   for different districts (WB `305 Bankura` vs `339`). **Never join on district code** — match on
@@ -85,7 +110,7 @@ None. Nothing has been queued with the owner.
   normalises before every join. `SUBDIS_LGD` has no consistent width and is left verbatim.
 - `District Boundary.shp` is PolygonZ but every Z is 0, so output is 2D.
 
-## 7. Rule summary (full detail in the data README)
+## 8. Rule summary (full detail in the data README)
 
 Corruption replaces a vowel with a stray ASCII character, in two equivalent sets:
 `>`/`<`→`A`, `@`/`#`→`U`, `|`/`\`→`I`. Result is uppercased; **plain ASCII only, no diacritics**,
