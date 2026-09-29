@@ -26,20 +26,6 @@ export const BASEMAPS = [
     maxZoom: 19,
   },
   {
-    id: 'carto-light',
-    name: 'Carto Positron',
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>, &copy; OpenStreetMap contributors',
-    maxZoom: 20,
-  },
-  {
-    id: 'carto-dark',
-    name: 'Carto Dark Matter',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>, &copy; OpenStreetMap contributors',
-    maxZoom: 20,
-  },
-  {
     id: 'esri-imagery',
     name: 'Esri World Imagery',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
