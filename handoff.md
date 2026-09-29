@@ -5,43 +5,42 @@
 > Re-check every fact in-session before writing it down; drop anything unverified. Move lasting
 > decisions into the project docs (README, policy, architecture) so they survive pruning.
 
-## Repository and run
+## Repository and data
 
-The repo is `~/workspace/soi-geojson`. Both generated GeoJSON tiers are checked in:
+The public repo is `https://github.com/drguptavivek/soi-geojson`, default branch `main`.
+Both generated GeoJSON tiers are committed:
 
-- `geojson/`: full-resolution build output, about 434 MB, copied from the Survey of India source
-  and kept for analysis.
-- `web/public/data/`: simplified display copy, about 52 MB, used directly by the browser app.
+- `geojson/`: full-resolution output, about 434 MB.
+- `web/public/data/`: simplified display copy, about 52 MB.
 
-The app runs without rebuilding data:
+The map runs from a checkout without building data:
 
 ```sh
-cd ~/workspace/soi-geojson/web
+cd web
 npm run dev
 ```
 
-To refresh the data, `build_geojson.py` reads source shapefiles and the LGD workbook from
+To rebuild, `build_geojson.py` reads the source shapefiles and LGD workbook from
 `~/Downloads/soi_pan_india/`, writes full-resolution GeoJSON to the repository's `geojson/`,
-and keeps its XLSX/audit outputs under Downloads. Then run `uv run build_web_data.py` from the
-repo root to refresh the checked-in browser copy. Source shapefiles/workbook are not in the repo.
+and keeps XLSX/audit outputs under Downloads. Then run `uv run build_web_data.py` from the repo
+root to refresh the browser copy. Source shapefiles and workbook are not in the repo.
 
-## Verified web data and map behavior
+## Verified map behavior
 
 - Browser copy has 36 states, 780 districts, and 6,639 sub-districts.
-- Disputed placeholder features are filtered before web GeoJSON is written; checked all three
-  layers and found no `DISPUTED` properties.
-- Labels anchor at a point computed from the largest polygon part; verified in Leaflet and
-  OpenLayers. The app starts with no basemap, and the layer control offers `None`.
+- Disputed placeholder features are filtered before web GeoJSON is written; all three layers were
+  checked and contain no `DISPUTED` properties.
+- Labels use anchors computed from the largest polygon part. Verified in Leaflet and OpenLayers.
+- The app starts with no basemap; the layer control offers `None`.
+- CARTO raster URLs use `?key=`, the documented host, and Voyager's documented rastertile paths.
 - `npm run build` succeeds. `npm run lint` reports six warnings in Sidebar, useGeoJson, filters,
   and state/layers; none are in the label or basemap changes.
-- CARTO raster URLs use `?key=`, the documented host, and Voyager's documented rastertiles paths.
 
-## Source inputs and rebuild caveats
+## Licensing and source caveats
 
+- Original code, scripts, and documentation are MIT-licensed. `LICENSE` explicitly excludes all
+  GeoJSON datasets and third-party source data.
+- Survey of India redistribution terms for the derived GeoJSON remain unconfirmed. Do not infer
+  data reuse permission from the repo's public visibility or the code MIT license.
 - Source shapefiles: `~/Downloads/soi_pan_india/State_District_Subdistrict_PAN INDIA/`.
 - Official LGD workbook: `~/Downloads/soi_pan_india/All_Districtof_India_2026-08-10_14-15-33.xlsx`.
-- `build_geojson.py` clears and recreates `geojson/` and the external XLSX output directory.
-  Keep the clear step: output filenames embed district names, so renames otherwise leave stale files.
-- The source RAR was previously verified with `lsar -t`; size alone does not prove a resumed download
-  is intact.
-- Licensing of the Survey of India source remains unverified; confirm terms before redistribution.

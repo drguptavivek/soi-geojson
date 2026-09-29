@@ -34,8 +34,13 @@ uv run build_web_data.py
 
 The second command regenerates the simplified browser copy from the repository's `geojson/` directory. The workbook and audit report are written to the source-data directory.
 
-## Provenance and licensing
+## Licensing
 
-The generated files are derived from Survey of India boundary data, with repository-side processing and corrections. The terms allowing redistribution of the source-derived data have **not been confirmed**; the source archive provided for this project contained no license statement. Public availability of this repository does not establish permission to reuse or redistribute the data. Confirm applicable Survey of India terms before relying on or redistributing it.
+The repository's original source code, build scripts, and documentation are licensed under the MIT
+License; see [`LICENSE`](LICENSE). This license explicitly excludes the generated GeoJSON in
+`geojson/` and `web/public/data/`, and all third-party source data.
 
-This repository does not currently include a license for its code or data. No third-party reuse license should be inferred from its public visibility.
+The GeoJSON files are processed derivatives of Survey of India boundary data. Redistribution terms
+for that source-derived data have **not been confirmed**; the source archive contained no license
+statement. Public availability does not establish permission to reuse or redistribute the data.
+Confirm applicable Survey of India terms before relying on or redistributing it.
