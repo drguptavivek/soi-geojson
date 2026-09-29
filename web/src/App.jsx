@@ -5,6 +5,7 @@ import { useGeoJson } from './hooks/useGeoJson'
 import { availableBasemaps } from './config/basemaps'
 import { useSelection } from './state/selection'
 import { buildLayers, buildLegend } from './state/layers'
+import LayersControl from './components/LayersControl'
 import { exportFeatures } from './lib/csv'
 import './styles.css'
 
@@ -21,6 +22,17 @@ export default function App() {
   const [labels, setLabels] = useState({ states: true, districts: false, subdistricts: false })
   const toggleLabel = useCallback(
     (k) => setLabels((l) => ({ ...l, [k]: !l[k] })), [])
+  // Layer keys switched off in the layers control. Kept across selection
+  // changes so a user's overlay choices survive a drill-down.
+  const [hidden, setHidden] = useState(() => new Set())
+  const toggleLayer = useCallback(
+    (k) => setHidden((s) => {
+      const n = new Set(s)
+      if (n.has(k)) n.delete(k)
+      else n.add(k)
+      return n
+    }), [])
+  const [layersOpen, setLayersOpen] = useState(false)
 
   const basemaps = useMemo(() => availableBasemaps(), [])
   const [basemapId, setBasemapId] = useState('osm')
@@ -66,12 +78,19 @@ export default function App() {
 
   const layers = useMemo(() => buildLayers({
     level, states, districtLayer, subLayer, state, district, subdistrict,
-    labels, focus, handlers,
-  }), [level, states, districtLayer, subLayer, state, district, subdistrict, labels, focus, handlers])
-
+    labels, focus, handlers, hidden,
+  }), [level, states, districtLayer, subLayer, state, district, subdistrict, labels, focus, handlers, hidden])
   const legend = useMemo(() => buildLegend({
+    level, states, districtLayer, subLayer, state, district, subdistrict, hidden,
+  }), [level, states, districtLayer, subLayer, state, district, subdistrict, hidden])
+
+  // Which overlays the control should offer: the keys buildLayers() would emit
+  // right now. Derived before `hidden` is applied, so switching a layer off
+  // leaves its checkbox in the panel rather than making it vanish.
+  const availableLayerKeys = useMemo(() => buildLayers({
     level, states, districtLayer, subLayer, state, district, subdistrict,
-  }), [level, states, districtLayer, subLayer, state, district, subdistrict])
+    labels, focus, handlers,
+  }).map((l) => l.key), [level, states, districtLayer, subLayer, state, district, subdistrict, labels, focus, handlers])
 
 
   // Export whatever the map is currently showing at this level. The geometry is
@@ -95,14 +114,18 @@ export default function App() {
       />
       <main className="map-pane">
         <div className="map-controls">
-          <label className="basemap-pick">
-            <span className="sr-only">Basemap</span>
-            <select value={basemap?.id} onChange={(e) => setBasemapId(e.target.value)}>
-              {basemaps.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </label>
+          <LayersControl
+            basemaps={basemaps}
+            basemap={basemap}
+            onBasemap={setBasemapId}
+            available={availableLayerKeys}
+            hidden={hidden}
+            onToggleLayer={toggleLayer}
+            labels={labels}
+            onToggleLabel={toggleLabel}
+            open={layersOpen}
+            onToggleOpen={() => setLayersOpen((v) => !v)}
+          />
           <div className="engine-switch" role="group" aria-label="Map engine">
             {['leaflet', 'openlayers'].map((e) => (
               <button
@@ -114,15 +137,6 @@ export default function App() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="label-toggles" role="group" aria-label="Labels">
-          {['states', 'districts', 'subdistricts'].map((k) => (
-            <label key={k} className={labels[k] ? 'on' : ''}>
-              <input type="checkbox" checked={labels[k]} onChange={() => toggleLabel(k)} />
-              {k === 'states' ? 'States' : k === 'districts' ? 'Districts' : 'Sub-districts'}
-            </label>
-          ))}
         </div>
 
         {engine === 'leaflet' ? (

@@ -238,13 +238,56 @@ html, body, #root { height: 100%; margin: 0; }
 .list-head { display: flex; align-items: center; gap: 8px; }
 .list-head .dl { margin-left: auto; }
 .dl {
-  flex: 0 0 auto; padding: 2px 6px; font-size: 11px; line-height: 1.4;
+  /* `.list button` sets width:100%, which would make this button consume the
+     whole row and squeeze the label down to a single character. It is an
+     icon-sized control, so it has to size to its own content. */
+  width: auto; flex: 0 0 auto; padding: 2px 6px; font-size: 11px; line-height: 1.4;
   color: var(--muted); background: none; cursor: pointer;
   border: 1px solid var(--line); border-radius: 4px;
 }
+/* Must out-specify `.list button { width: 100% }`, which is (0,1,1) against
+   this rule's (0,1,0) -- otherwise the button fills the row and the label
+   collapses to one character. */
+.list .row .dl, .list button.dl { width: auto; }
 .dl:hover:not(:disabled) { background: #f1f5f9; color: var(--text); }
 .dl:disabled { opacity: .4; cursor: not-allowed; }
 .list .row .dl { border-color: transparent; }
 .list .row .dl:hover:not(:disabled) { border-color: var(--line); }
 .list .row.on .dl { color: rgba(255,255,255,.85); }
 .list .row.on .dl:hover:not(:disabled) { background: rgba(0,0,0,.18); color: #fff; }
+
+/* ---- layers control (base layer + overlays) ---- */
+.layers-control { position: relative; }
+.lc-toggle {
+  padding: 5px 12px; font-size: 13px; cursor: pointer;
+  background: #fff; color: var(--text);
+  border: 1px solid var(--line); border-radius: 5px;
+}
+.lc-toggle:hover { background: #f1f5f9; }
+.lc-body {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1100;
+  width: 232px; max-height: 62vh; overflow-y: auto;
+  background: rgba(255,255,255,.98); border: 1px solid var(--line);
+  border-radius: 6px; box-shadow: 0 6px 20px rgba(15,23,42,.16);
+  padding: 8px 0 10px;
+}
+.lc-body section + section { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.lc-body h3 {
+  margin: 0 0 4px; padding: 0 12px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted);
+}
+.lc-body ul { list-style: none; margin: 0; padding: 0; }
+.lc-body label {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 12px; font-size: 13px; color: var(--text); cursor: pointer;
+}
+.lc-body label:hover { background: #f1f5f9; }
+.lc-body input { margin: 0; accent-color: var(--accent); }
+.lc-body span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-body .lc-group {
+  padding: 6px 12px 2px; list-style: none;
+  font-size: 10px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--muted);
+}
+.lc-body li.lc-group:first-child { padding-top: 0; }

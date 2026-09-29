@@ -20,11 +20,16 @@ const NAME_KEY = {
 }
 
 const nFeatures = (gj) => (gj ? gj.features.length : 0)
+const EMPTY_SET = new Set()
 
 export function buildLayers({
   level, states, districtLayer, subLayer,
   state, district, subdistrict,
   labels = {}, focus, handlers = {},
+  // Layer keys the user has switched off in the layers control. Collected
+  // below rather than tested at each push, so a layer can be described in one
+  // place and still respect the toggle.
+  hidden = EMPTY_SET,
 }) {
   const layers = []
   const on = (k) => handlers[k]
@@ -84,16 +89,27 @@ export function buildLayers({
       })
     }
   }
-  return layers.map((l) => ({ nameKey: NAME_KEY[l.kind] ?? 'name', ...l }))
+  return layers
+    .filter((l) => !hidden.has(l.key))
+    .map((l) => ({ nameKey: NAME_KEY[l.kind] ?? 'name', ...l }))
 }
 
-export function buildLegend({ level, states, districtLayer, subLayer, state, district, subdistrict }) {
+export function buildLegend({
+  level, states, districtLayer, subLayer, state, district, subdistrict,
+  // Must match buildLayers' hidden set, or the legend keeps advertising a
+  // layer the user has switched off.
+  hidden = EMPTY_SET,
+}) {
   const legend = []
   if (level === 'country') {
-    if (states) legend.push({ label: 'States / UTs', color: 'rgba(37,99,235,.35)', count: nFeatures(states) })
+    if (states && !hidden.has('states')) {
+      legend.push({ label: 'States / UTs', color: 'rgba(37,99,235,.35)', count: nFeatures(states) })
+    }
   } else if (level === 'state') {
-    if (districtLayer) legend.push({ label: `${state?.name} districts`, color: 'rgba(13,148,136,.35)', count: nFeatures(districtLayer) })
-  } else if (subLayer) {
+    if (districtLayer && !hidden.has('districts')) {
+      legend.push({ label: `${state?.name} districts`, color: 'rgba(13,148,136,.35)', count: nFeatures(districtLayer) })
+    }
+  } else if (subLayer && !hidden.has('subs')) {
     legend.push({
       label: subdistrict ? `${subdistrict.name} (${district?.name})` : `${district?.name} sub-districts`,
       color: 'rgba(180,83,9,.35)',

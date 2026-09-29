@@ -143,6 +143,7 @@ export default function MapView({ layers, legend, basemap }) {
           key={basemap.id}
           url={leafletUrl(basemap, true)}
           maxZoom={basemap.maxZoom ?? 19}
+          attribution={basemap.attribution}
         />
       )}
       {styled.map((l) => (l.data
