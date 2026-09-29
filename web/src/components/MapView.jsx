@@ -12,6 +12,7 @@ const FILL = {
   districts: { color: '#0d9488', weight: 0.8, fillOpacity: 0.2 },
   subdistricts: { color: '#b45309', weight: 0.5, fillOpacity: 0.3 },
   disputed: { color: '#dc2626', weight: 1, dashArray: '4 3', fillOpacity: 0.15 },
+  outline: { color: '#475569', weight: 1.4, fillOpacity: 0 },
 }
 
 /** Every [lng, lat] pair in a geometry, however deeply it is nested. */
