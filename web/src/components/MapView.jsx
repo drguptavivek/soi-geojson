@@ -29,6 +29,19 @@ function coordPairs(geometry) {
  */
 const sigOf = (l) => JSON.stringify([l.categorical, l.style, l.labels, l.emphasis])
 
+
+/**
+ * Stable id per data object. react-leaflet keeps the existing layer when the
+ * component key is unchanged, so switching district (new `data`, same layer
+ * key) would otherwise leave the previous district's sub-districts drawn.
+ */
+const dataIds = new WeakMap()
+let nextDataId = 1
+const idOf = (d) => {
+  if (!d) return 'none'
+  if (!dataIds.has(d)) dataIds.set(d, nextDataId++)
+  return dataIds.get(d)
+}
 /**
  * Leaflet wants a function so each feature can take its own colour. Three
  * modes: `categorical` gives every polygon its own hue, `emphasis` singles one
@@ -133,7 +146,12 @@ export default function MapView({ layers, legend, basemap }) {
         />
       )}
       {styled.map((l) => (l.data
-        ? <GeoJSON key={`${l.key}:${sigOf(l)}`} data={l.data} style={l.styled} onEachFeature={l.onEach} />
+        ? <GeoJSON
+          key={`${l.key}:${idOf(l.data)}:${sigOf(l)}`}
+          data={l.data}
+          style={l.styled}
+          onEachFeature={l.onEach}
+        />
         : null))}
       <FitBounds geojson={primary?.data} focus={primary?.focus} />
       {legend.length > 0 && (
