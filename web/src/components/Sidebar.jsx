@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { visibleStates, filterDistricts, filterSubdistricts, isSearching, counts } from '../state/filters'
+import { exportChildAttributes } from '../lib/csv'
 
 const EMPTY = []
 
@@ -10,7 +11,7 @@ const EMPTY = []
  * All selection and filtering comes from ../state, so this component is purely
  * presentation and knows nothing about the map.
  */
-export default function Sidebar({ index, selection }) {
+export default function Sidebar({ index, selection, onExportScope }) {
   const [q, setQ] = useState('')
   const [openState, setOpenState] = useState(null)
   const [openDistrict, setOpenDistrict] = useState(null)
@@ -121,6 +122,14 @@ export default function Sidebar({ index, selection }) {
       <div className="list-head">
         <span>{n.states} states</span>
         <span className="code">{n.districts} districts &middot; {n.subdistricts} sub</span>
+        <button
+          className="dl"
+          onClick={onExportScope}
+          disabled={!onExportScope}
+          title="Download the features on the current level as CSV, with boundary geometry"
+        >
+          &darr; CSV
+        </button>
       </div>
 
       <ul className="list tree">
@@ -146,6 +155,15 @@ export default function Sidebar({ index, selection }) {
                   {s.name}
                 </button>
                 <span className="cd">{s.code || '—'}</span>
+                <button
+                  className="dl"
+                  onClick={() => exportChildAttributes(s, 'state')}
+                  disabled={!s.districts.length}
+                  title={`Download ${s.districts.length} districts of ${s.name} as CSV`}
+                  aria-label={`Download ${s.name} districts as CSV`}
+                >
+                  &darr;
+                </button>
               </div>
 
               {openS && (
@@ -173,6 +191,15 @@ export default function Sidebar({ index, selection }) {
                                 : 'No sub-district geometry in the source data'}
                             >
                               {d.name}
+                            </button>
+                            <button
+                              className="dl"
+                              onClick={() => exportChildAttributes(d, 'district', s)}
+                              disabled={!d.subdistricts.length}
+                              title={`Download ${d.subdistricts.length} sub-districts of ${d.name} as CSV`}
+                              aria-label={`Download ${d.name} sub-districts as CSV`}
+                            >
+                              &darr;
                             </button>
                             <span className="cd">{d.code || '—'}</span>
                           </div>

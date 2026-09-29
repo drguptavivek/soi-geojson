@@ -66,10 +66,11 @@ src/
     basemaps.js     provider registry + URL expansion for each engine
     palette.js      categorical hues (golden-angle spread)
   components/
-    Sidebar.jsx         tree, breadcrumb, filter — presentation only
+    Sidebar.jsx         tree, breadcrumb, filter, CSV export — presentation only
     MapView.jsx         Leaflet renderer
     MapViewOL.jsx       OpenLayers renderer
     ErrorBoundary.jsx   keeps a panel failure from blanking the app
+  lib/csv.js           CSV escaping, GeoJSON→WKT, blob download
   hooks/useGeoJson.js   fetch + keep-previous-value loading
 ```
 
@@ -99,11 +100,48 @@ Simplification is Douglas-Peucker at a tolerance tuned to the zoom each level is
 **Use the originals in `~/Downloads/soi_pan_india/geojson` for any analysis.** These files are
 display-only and are not topologically faithful.
 
-`index.json` holds the whole tree — 40 states, 780 coded districts, 6,639 sub-districts — as codes
+`index.json` holds the whole tree — 36 states, 780 coded districts, 6,639 sub-districts — as codes
 and names with no geometry, so the tree is usable before any map data arrives.
+
+### CSV export
+
+Two ways out, both client-side — nothing is uploaded, the files are built in the page from data
+it already holds.
+
+**↓ CSV**, in the list header, exports whatever the map is showing at the current level. Because
+the geometry for the current level is always loaded, this always includes a `geometry_wkt`
+column, plus `wkt_simplified_deg` and `wkt_simplified_about` recording the Douglas-Peucker
+tolerance those coordinates were generalised to. The file is named for its scope:
+`india_states.csv`, `kerala_districts.csv`, `palakkad_subdistricts.csv`.
+
+**↓** on a state or district row exports that node's children as attributes only — no geometry,
+and no request, so any state or district can be exported without navigating to it first.
+
+The WKT is display geometry, at the tolerance recorded in the file. It is fine for plotting and
+joining, not for measurement. Use the originals in `~/Downloads/soi_pan_india/geojson` when
+accuracy matters.
+
+## Disputed boundary areas
+
+The publisher ships cross-border placeholders named `DISPUTED (A & B)` with no LGD code — 4 state
+polygons and 28 district polygons. They are slivers drawn over the real borders, so they
+double-drew those boundaries and put the word `DISPUTED` on the map and in the tree.
+
+`build_web_data.py` now drops them, so the data itself no longer carries them. Madhya Pradesh,
+Gujarat, Rajasthan, Bihar, Jharkhand and West Bengal are all still present as their own features,
+so the map shows them plainly. The state count is 36 — the real 28 states + 8 UTs; the
+placeholders were inflating it to 40.
 
 ## Verified
 
 Live dev server, both engines, no console errors: country → Kerala → Palakkad → Chittur, with the
 tree, breadcrumb, label toggles, hover names, basemap switching and the error boundary all
 exercised. `npm run build` clean.
+
+
+CSV export exercised at all three levels and both export paths. Every file was captured from the
+real download, then parsed back with GeoPandas: 36 states / 14 Kerala districts / 7 Palakkad
+sub-districts, all geometries valid, all EPSG:4326, and Chittur's exported WKT compares
+`.equals()` to the source geometry. Quoting round-trips the dataset's one awkward name
+(`SADAR, SUNDARGARH`) through pandas. **No tests** — this is manual verification, and
+`lib/csv.js` and `buildLayers()` are the pure functions worth pinning down first.

@@ -5,6 +5,7 @@ import { useGeoJson } from './hooks/useGeoJson'
 import { availableBasemaps } from './config/basemaps'
 import { useSelection } from './state/selection'
 import { buildLayers, buildLegend } from './state/layers'
+import { exportFeatures } from './lib/csv'
 import './styles.css'
 
 // OpenLayers is only fetched when the user switches to it, so Leaflet-only
@@ -72,6 +73,17 @@ export default function App() {
     level, states, districtLayer, subLayer, state, district, subdistrict,
   }), [level, states, districtLayer, subLayer, state, district, subdistrict])
 
+
+  // Export whatever the map is currently showing at this level. The geometry is
+  // already loaded at every level, so this always produces attributes + WKT.
+  const exportScope = useCallback(() => {
+    if (level === 'country' && states) exportFeatures(states, 'states', 'india')
+    else if (level === 'state' && districtLayer) {
+      exportFeatures(districtLayer, 'districts', state?.name)
+    } else if (subLayer) {
+      exportFeatures(subLayer, 'subdistricts', district?.name)
+    }
+  }, [level, states, districtLayer, subLayer, state, district])
   const busy = dLoading || sLoading
 
   return (
@@ -79,7 +91,7 @@ export default function App() {
       <Sidebar
         index={index}
         selection={sel}
-        onToggleUnassigned={() => { setShowUnassigned((v) => !v); sel.goHome() }}
+        onExportScope={exportScope}
       />
       <main className="map-pane">
         <div className="map-controls">

@@ -233,3 +233,18 @@ html, body, #root { height: 100%; margin: 0; }
   border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a;
 }
 .crash button:hover { background: #f1f5f9; }
+
+/* ---- CSV download buttons ---- */
+.list-head { display: flex; align-items: center; gap: 8px; }
+.list-head .dl { margin-left: auto; }
+.dl {
+  flex: 0 0 auto; padding: 2px 6px; font-size: 11px; line-height: 1.4;
+  color: var(--muted); background: none; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 4px;
+}
+.dl:hover:not(:disabled) { background: #f1f5f9; color: var(--text); }
+.dl:disabled { opacity: .4; cursor: not-allowed; }
+.list .row .dl { border-color: transparent; }
+.list .row .dl:hover:not(:disabled) { border-color: var(--line); }
+.list .row.on .dl { color: rgba(255,255,255,.85); }
+.list .row.on .dl:hover:not(:disabled) { background: rgba(0,0,0,.18); color: #fff; }

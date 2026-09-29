@@ -83,22 +83,28 @@ const slug = (s) =>
     .replace(/^_+|_+$/g, '') || 'india'
 
 /** Attribute-only export for one node's children, straight from the index. */
-export function exportChildAttributes(node, kind) {
+export function exportChildAttributes(node, kind, parent) {
   if (!node) return
-  const children = kind === 'state' ? node.districts : node.subdistricts
+  const isState = kind === 'state'
+  const children = isState ? node.districts : node.subdistricts
   if (!children?.length) return
-  const scope = kind === 'state' ? 'districts' : 'subdistricts'
-  const columns = kind === 'state'
+  const scope = isState ? 'districts' : 'subdistricts'
+  const columns = isState
     ? ['state_lgd', 'state_name', 'district_lgd', 'district_name']
     : ['state_lgd', 'state_name', 'district_lgd', 'district_name',
        'subdistrict_lgd', 'subdistrict_name', 'subdistrict_type']
+  // The index nests districts under their state and sub-districts under their
+  // district, so a row's children know neither ancestor. For a district row
+  // `node` is the district, so the state columns must come from `parent`.
+  const stateLgd = isState ? node.code : parent?.code
+  const stateName = isState ? node.name : parent?.name
   downloadCsv(
     `${slug(node.name)}_${scope}.csv`,
     toCsv(columns, children.map((c) => ({
-      state_lgd: node.code,
-      state_name: node.name,
-      district_lgd: kind === 'state' ? c.code : node.code,
-      district_name: kind === 'state' ? c.name : node.name,
+      state_lgd: stateLgd,
+      state_name: stateName,
+      district_lgd: isState ? c.code : node.code,
+      district_name: isState ? c.name : node.name,
       subdistrict_lgd: c.code,
       subdistrict_name: c.name,
       subdistrict_type: c.type,
