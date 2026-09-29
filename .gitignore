@@ -1,0 +1,18 @@
+# Python build environment (uv)
+.venv/
+__pycache__/
+*.pyc
+
+# Generated data — 435 MB, rebuilt with `uv run build_geojson.py`
+# Output goes to ~/Downloads/soi_pan_india; web copies to web/public/data
+web/public/data/
+data/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# OS
+.DS_Store
