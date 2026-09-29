@@ -5,7 +5,6 @@
   --text: #0f172a;
   --muted: #64748b;
   --accent: #2563eb;
-  --disputed: #dc2626;
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -64,19 +63,17 @@ html, body, #root { height: 100%; margin: 0; }
   width: 100%; padding: 6px 8px; font-size: 13px; text-align: left;
   border: 0; border-radius: 5px; background: none; color: var(--text); cursor: pointer;
 }
+/* A selected row is already the dark accent colour, so hovering must not
+   repaint it light: the label text is white, and a light hover background
+   under white text is unreadable. Hovering a selected row instead lightens
+   the accent slightly, keeping the text legible. */
 .list button:hover:not(:disabled) { background: #f1f5f9; }
-.list button.on { background: var(--accent); color: #fff; }
+.list button.on, .list button.on:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.list .row.on .label:hover:not(:disabled) { background: rgba(0, 0, 0, .18); }
 .list button.on .cd { color: rgba(255,255,255,.8); }
 .list button:disabled { color: #b6c0cc; cursor: not-allowed; }
 .list .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list .cd { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-.disputed {
-  margin: 0 12px 10px; padding: 7px; font-size: 12px; cursor: pointer;
-  border: 1px dashed var(--disputed); border-radius: 6px;
-  background: #fff; color: var(--disputed);
-}
-.disputed:hover { background: #fef2f2; }
 
 .sidebar footer { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
 .sidebar footer p { margin: 0 0 3px; }
@@ -137,8 +134,8 @@ html, body, #root { height: 100%; margin: 0; }
 }
 
 .list .row { display: flex; align-items: center; gap: 2px; border-radius: 5px; }
-.list .row:hover { background: #f1f5f9; }
-.list .row.on { background: var(--accent); }
+.list .row:hover:not(.on) { background: #f1f5f9; }
+.list .row.on, .list .row.on:hover { background: var(--accent); }
 .list .row.on .cd { color: rgba(255,255,255,.85); }
 .list .row.on .dot { background: rgba(255,255,255,.9); }
 

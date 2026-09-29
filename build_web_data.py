@@ -36,11 +36,37 @@ def stem_of(filename):
 
 
 def simplify(path, tol, out):
-    gdf = gpd.read_file(path)
+    gdf = drop_disputed(gpd.read_file(path))
     gdf["geometry"] = gdf.geometry.simplify(tol, preserve_topology=True)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     gdf.to_file(out, driver="GeoJSON", COORDINATE_PRECISION=PRECISION)
     return os.path.getsize(out), len(gdf)
+
+
+# The publisher labels cross-border placeholders 'DISPUTED (A & B)' and gives
+# them no LGD code. They are slivers laid over the real borders, so keeping
+# them both double-draws those boundaries and puts the word DISPUTED on the
+# map. The real A and B are already present as their own features, so dropping
+# the placeholders leaves plain states.
+DISPUTED_PREFIX = "DISPUTED"
+NAME_COLS = ("state_name", "district_name", "subdistrict_name", "remarks")
+
+
+def drop_disputed(gdf):
+    mask = False
+    for c in NAME_COLS:
+        if c in gdf.columns:
+            m = gdf[c].fillna("").astype(str).str.upper().str.startswith(DISPUTED_PREFIX)
+            mask = m if mask is False else (mask | m)
+    return gdf if mask is False else gdf[~mask]
+
+
+def is_disputed(row):
+    """True for the publisher's cross-border placeholders. Works on the raw
+    property dict props() returns, mirroring drop_disputed() for GeoFrames."""
+    return any(
+        str(row.get(c) or "").upper().startswith(DISPUTED_PREFIX) for c in NAME_COLS
+    )
 
 
 def props(path):
@@ -58,7 +84,9 @@ def main():
     p = f"{SRC}/states.geojson"
     n, k = simplify(p, TOL["states"], f"{DST}/states.geojson")
     totals["states"] = n
-    state_rows = props(p)
+    # The source carries 4 disputed placeholders; simplify() has already dropped
+    # them from the geometry, so drop them from the index rows too.
+    state_rows = [r for r in props(p) if not is_disputed(r)]
     print(f"states.geojson      {len(state_rows):3} features  {n/1048576:6.1f} MB")
 
     # --- districts, one file per state ---
@@ -68,6 +96,10 @@ def main():
     dn = dk = 0
     for fn in sorted(os.listdir(dist_dir)):
         if not fn.endswith(EXT):
+            continue
+        if fn.startswith("_"):
+            # '_disputed.geojson' holds the 28 cross-border placeholders. They
+            # belong to no state, so nothing in the tree can link to them.
             continue
         n, k = simplify(f"{dist_dir}/{fn}", TOL["districts"], f"{DST}/districts/{fn}")
         dn += n
@@ -136,6 +168,9 @@ def main():
                      for f in sorted(os.listdir(f"{DST}/districts"))
                      if f.endswith(EXT) and not f.startswith("_")}
 
+    # `props()` reads the source, which still carries the 4 disputed state
+    # placeholders; simplify() has already dropped them from the geometry.
+    state_rows = [r for r in state_rows if not is_disputed(r)]
     states = []
     for s in state_rows:
         stem = by_state_code.get(s["state_lgd"]) if s["state_lgd"] else None
@@ -148,9 +183,7 @@ def main():
     states.sort(key=lambda s: (not s["code"], s["code"]))
 
     with open(f"{DST}/index.json", "w") as f:
-        json.dump({"states": states,
-                   "disputed_districts": "districts/_disputed.geojson",
-                   "crs": "EPSG:4326"}, f, separators=(",", ":"))
+        json.dump({"states": states, "crs": "EPSG:4326"}, f, separators=(",", ":"))
     print(f"index.json          {len(states):3} states, "
           f"{sum(len(s['districts']) for s in states)} districts, "
           f"{os.path.getsize(f'{DST}/index.json')/1024:.0f} KB")

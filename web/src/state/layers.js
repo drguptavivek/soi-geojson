@@ -16,7 +16,6 @@ const NAME_KEY = {
   states: 'state_name',
   districts: 'district_name',
   subdistricts: 'subdistrict_name',
-  unassigned: 'district_name',
   outline: null,
 }
 
@@ -47,9 +46,6 @@ export function buildLayers({
         style: { weight: 1.1, fillOpacity: 0.35 },
         labels: !!labels.states, onClick: on('state'),
       })
-    }
-    if (handlers.unassigned) {
-      layers.push({ key: 'unassigned', kind: 'unassigned', data: handlers.unassigned })
     }
   } else if (level === 'state') {
     // Neighbouring states keep a visible outline but no fill; the state in
@@ -91,11 +87,10 @@ export function buildLayers({
   return layers.map((l) => ({ nameKey: NAME_KEY[l.kind] ?? 'name', ...l }))
 }
 
-export function buildLegend({ level, states, districtLayer, subLayer, unassigned, state, district, subdistrict }) {
+export function buildLegend({ level, states, districtLayer, subLayer, state, district, subdistrict }) {
   const legend = []
   if (level === 'country') {
     if (states) legend.push({ label: 'States / UTs', color: 'rgba(37,99,235,.35)', count: nFeatures(states) })
-    if (unassigned) legend.push({ label: 'Unassigned boundary areas', color: 'rgba(220,38,38,.35)', count: nFeatures(unassigned) })
   } else if (level === 'state') {
     if (districtLayer) legend.push({ label: `${state?.name} districts`, color: 'rgba(13,148,136,.35)', count: nFeatures(districtLayer) })
   } else if (subLayer) {

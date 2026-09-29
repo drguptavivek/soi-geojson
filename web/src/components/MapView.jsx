@@ -11,7 +11,6 @@ const FILL = {
   states: { color: '#2563eb', weight: 1, fillOpacity: 0.15 },
   districts: { color: '#0d9488', weight: 0.8, fillOpacity: 0.2 },
   subdistricts: { color: '#b45309', weight: 0.5, fillOpacity: 0.3 },
-  disputed: { color: '#dc2626', weight: 1, dashArray: '4 3', fillOpacity: 0.15 },
   outline: { color: '#475569', weight: 1.4, fillOpacity: 0 },
 }
 

@@ -3,13 +3,6 @@ import { visibleStates, filterDistricts, filterSubdistricts, isSearching, counts
 
 const EMPTY = []
 
-/**
- * The source names the four cross-border polygons 'DISPUTED (A & B)'. That
- * wording is the publisher's, not ours -- the UI shows a neutral label while
- * the data keeps the original value.
- */
-const displayName = (n) =>
-  (n || '').replace(/^DISPUTED\s*\((.*)\)$/i, 'Boundary area — $1')
 
 /**
  * State > District > Sub-district, as one tree with connector rules.
@@ -17,7 +10,7 @@ const displayName = (n) =>
  * All selection and filtering comes from ../state, so this component is purely
  * presentation and knows nothing about the map.
  */
-export default function Sidebar({ index, selection, onToggleUnassigned, unassigned }) {
+export default function Sidebar({ index, selection }) {
   const [q, setQ] = useState('')
   const [openState, setOpenState] = useState(null)
   const [openDistrict, setOpenDistrict] = useState(null)
@@ -150,7 +143,7 @@ export default function Sidebar({ index, selection, onToggleUnassigned, unassign
                   disabled={!s.file}
                   title={s.file ? `${s.districts.length} districts` : 'Cross-border area — no district layer'}
                 >
-                  {displayName(s.name)}
+                  {s.name}
                 </button>
                 <span className="cd">{s.code || '—'}</span>
               </div>
@@ -179,7 +172,7 @@ export default function Sidebar({ index, selection, onToggleUnassigned, unassign
                                 ? `${d.subdistricts.length} sub-districts`
                                 : 'No sub-district geometry in the source data'}
                             >
-                              {displayName(d.name)}
+                              {d.name}
                             </button>
                             <span className="cd">{d.code || '—'}</span>
                           </div>
@@ -220,10 +213,6 @@ export default function Sidebar({ index, selection, onToggleUnassigned, unassign
           )
         })}
       </ul>
-
-      <button className={`disputed ${unassigned ? 'on' : ''}`} onClick={onToggleUnassigned}>
-        {unassigned ? 'Hide' : 'Show'} 28 unassigned areas
-      </button>
 
       <footer>
         <p>{index ? `${n.states} states · ${n.districts} districts · ${n.subdistricts} sub-districts` : 'loading index…'}</p>

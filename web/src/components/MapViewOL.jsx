@@ -17,7 +17,6 @@ const STYLE = {
   states: { color: '#2563eb', width: 1, fill: 0.15 },
   districts: { color: '#0d9488', width: 0.8, fill: 0.2 },
   subdistricts: { color: '#b45309', width: 0.5, fill: 0.3 },
-  disputed: { color: '#dc2626', width: 1, dash: [6, 4], fill: 0.15 },
   outline: { color: '#475569', width: 1.4, fill: 0 },
 }
 

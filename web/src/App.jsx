@@ -16,7 +16,6 @@ export default function App() {
   const sel = useSelection()
   const { state, district, subdistrict, level } = sel
 
-  const [showUnassigned, setShowUnassigned] = useState(false)
   const [engine, setEngine] = useState('leaflet')
   const [labels, setLabels] = useState({ states: true, districts: false, subdistricts: false })
   const toggleLabel = useCallback(
@@ -33,7 +32,6 @@ export default function App() {
   }, [basemaps, basemapId])
 
   const { data: states } = useGeoJson('states.geojson')
-  const { data: unassigned } = useGeoJson(showUnassigned ? index?.disputed_districts : null)
   const { data: districtLayer, loading: dLoading } = useGeoJson(state?.file || null)
   const { data: subLayer, loading: sLoading } = useGeoJson(
     district?.subdistrict_files?.[0] || null,
@@ -51,8 +49,7 @@ export default function App() {
       const sd = sel.pickSubdistrictByProps(props)
       if (sd) sel.selectSubdistrict(sd)
     },
-    unassigned,
-  }), [sel, index, unassigned])
+  }), [sel, index])
 
   // Zoom to a single sub-district when one is selected.
   const focus = useMemo(() => {
@@ -72,8 +69,8 @@ export default function App() {
   }), [level, states, districtLayer, subLayer, state, district, subdistrict, labels, focus, handlers])
 
   const legend = useMemo(() => buildLegend({
-    level, states, districtLayer, subLayer, unassigned, state, district, subdistrict,
-  }), [level, states, districtLayer, subLayer, unassigned, state, district, subdistrict])
+    level, states, districtLayer, subLayer, state, district, subdistrict,
+  }), [level, states, districtLayer, subLayer, state, district, subdistrict])
 
   const busy = dLoading || sLoading
 
@@ -83,7 +80,6 @@ export default function App() {
         index={index}
         selection={sel}
         onToggleUnassigned={() => { setShowUnassigned((v) => !v); sel.goHome() }}
-        unassigned={showUnassigned}
       />
       <main className="map-pane">
         <div className="map-controls">
