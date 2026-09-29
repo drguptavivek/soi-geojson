@@ -36,21 +36,45 @@ npm run dev
 Districts with no sub-district geometry in the source (27 in Arunachal Pradesh, 12 in Meghalaya)
 are shown but disabled, with the reason in the tooltip.
 
+## Layers control
+
+**Layers**, top-left of the map, replaces a plain basemap dropdown: base layers as radios under
+their provider, then Overlays and Labels as checkboxes. It is Leaflet's `L.control.layers` model,
+written once rather than per engine — using each engine's native control would give Leaflet and
+OpenLayers two different panels for one feature, and an OL LayerSwitcher tracks OL layer objects
+that do not survive the rebuild on every selection change. Overlay choices persist across
+drill-down; the legend hides with its layer.
+
 ## Basemaps
 
-Pick from the dropdown, top-right. Thirteen providers are declared in
-`src/config/basemaps.js`; one needing an API key you have not supplied is simply not offered, so
-the list never shows a layer that would 401.
+23 are declared in `src/config/basemaps.js`; any needing an API key you have not supplied is
+simply not offered, so the list never shows a layer that would fail.
 
 Keys live in `web/.env` (git-ignored):
 
 ```sh
-cp .env.example .env      # fill in VITE_STADIA_API_KEY / VITE_MAPBOX_TOKEN
+cp .env.example .env      # VITE_STADIA_API_KEY / VITE_MAPBOX_TOKEN / VITE_CARTO_API_KEY
 ```
 
 Vite inlines `VITE_*` variables into the client bundle, so a key set there is visible to anyone
 who loads the page. That is expected for these services — restrict the key by HTTP referrer in
 the provider's dashboard, and never put a server-side secret there.
+
+Two things about basemap tiles that are worth knowing rather than assuming:
+
+- **There is no "no labels" switch on standard OSM raster tiles.** Labels are baked into the
+  image. Keyless options for a text-light map are Humanitarian (HOT), which draws far fewer place
+  names, or satellite/imagery, which has none.
+- **Carto's tiles do need a key, and the failure is silent.** An unauthenticated request returns
+  HTTP 200 whose body is an "API KEY REQUIRED" placeholder image, not an error. Status codes and
+  content types both look fine; only the image gives it away.
+
+## Attribution
+
+Every layer carries its provider's credit, bottom-right. Leaflet was wired to render it only in
+the last pass — the strings existed in config and never reached the screen. OSM-derived providers
+credit OpenStreetMap; imagery providers (Esri, Google, Mapbox satellite) credit their own source,
+which is correct, since they do not serve OSM data.
 
 ## Structure
 
