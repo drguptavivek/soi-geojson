@@ -25,6 +25,10 @@ const SUBDOMAINS = ['a', 'b', 'c']
  * key keeps the switcher honest. The attribution is fixed by their licence and
  * identical across every variant, so it is written once rather than repeated
  * nine times where it could drift.
+ *
+ * The key travels as `?key=`. Any other parameter name is silently ignored and
+ * the CDN serves the same watermark with HTTP 200, so `?api_key=` is
+ * indistinguishable from a bad key until you read the tile bytes.
  */
 const CARTO_ATTRIBUTION = 'Map tiles by <a href="https://carto.com/">Carto</a>, under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Data by <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, under ODbL.'
 const CARTO_STYLES = [
@@ -37,12 +41,23 @@ const CARTO_VARIANTS = [
   { slug: 'nolabels', label: ' (no labels)' },
   { slug: 'only_labels', label: ' (labels only)' },
 ]
+
+// Voyager is served under `rastertiles/` and its all-labels style has no `_all`
+// suffix; Positron and Dark Matter keep the classic `{style}_{variant}` layout.
+// Per https://github.com/CartoDB/basemap-styles.
+function cartoPath(styleSlug, variantSlug) {
+  if (styleSlug === 'voyager') {
+    return variantSlug === 'all' ? 'rastertiles/voyager' : `rastertiles/voyager_${variantSlug}`
+  }
+  return `${styleSlug}_${variantSlug}`
+}
+
 const cartoBasemaps = CARTO_STYLES.flatMap((style) =>
   CARTO_VARIANTS.map((variant) => ({
     id: `carto-${style.slug}-${variant.slug}`,
     name: `Carto ${style.name}${variant.label}`,
     group: 'Carto',
-    url: `https://cartodb-basemaps-{s}.global.ssl.fastly.net/${style.slug}_${variant.slug}/{z}/{x}/{y}.png?api_key={key}`,
+    url: `https://{s}.basemaps.cartocdn.com/${cartoPath(style.slug, variant.slug)}/{z}/{x}/{y}{r}.png?key={key}`,
     attribution: CARTO_ATTRIBUTION,
     maxZoom: 20,
     env: 'VITE_CARTO_API_KEY',
