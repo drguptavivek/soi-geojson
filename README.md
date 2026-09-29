@@ -4,6 +4,9 @@ This repository contains a processing pipeline and browser map for state, distri
 
 The processing repairs selected source-name corruption and normalizes the attributes. The browser copy is simplified for display and omits disputed placeholder features. For authoritative boundaries, consult Survey of India and the appropriate government authority; do not use these files as a legal or administrative source.
 
+**Live map:** <https://drguptavivek.github.io/soi-geojson/>
+
+
 ## Data
 
 | Path | Contents |
