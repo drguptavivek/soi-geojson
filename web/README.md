@@ -46,6 +46,10 @@ that do not survive the rebuild on every selection change. Overlay choices persi
 drill-down; the legend hides with its layer.
 
 ## Basemaps
+By default the map has no basemap. Choose one in **Layers** when you want a background; select
+**None** to return to a plain background. State and administrative labels use an anchor computed
+from the largest polygon part, so detached border fragments cannot pull a label off-center.
+
 
 23 are declared in `src/config/basemaps.js`; any needing an API key you have not supplied is
 simply not offered, so the list never shows a layer that would fail.

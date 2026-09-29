@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from 'react'
+import { Fragment, useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import { leafletUrl } from '../config/basemaps'
 import { colorFor, fillFor } from '../config/palette'
-import 'leaflet/dist/leaflet.css'
 
 const INDIA = [22.5, 79.0]
 
@@ -92,6 +92,13 @@ function FitBounds({ geojson, focus }) {
   }, [geojson, focus, map])
   return null
 }
+const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[char]))
 
 export default function MapView({ layers, legend, basemap }) {
   // Layers are ordered general -> specific, so the last one loaded is the
@@ -102,16 +109,28 @@ export default function MapView({ layers, legend, basemap }) {
     () => layers.map((l) => {
       if (!l.data) return l
       const nameKey = l.nameKey || (l.kind === 'states' ? 'state_name' : `${l.kind}_name`)
+      const labelData = l.labels ? {
+        type: 'FeatureCollection',
+        features: l.data.features.flatMap((feature) => {
+          const properties = feature.properties || {}
+          const name = properties[nameKey]
+          const lon = Number(properties.label_lon)
+          const lat = Number(properties.label_lat)
+          if (!name || !Number.isFinite(lon) || !Number.isFinite(lat)) return []
+          return [{
+            type: 'Feature',
+            properties: { label: name },
+            geometry: { type: 'Point', coordinates: [lon, lat] },
+          }]
+        }),
+      } : null
       return {
         ...l,
+        labelData,
         styled: styleFor(l, l.data.features),
         onEach: (feature, lyr) => {
           const name = feature.properties?.[nameKey]
-          // Leaflet holds one tooltip per layer, so a permanent label and a
-          // hover tip are mutually exclusive -- never bind both.
-          if (name && l.labels) {
-            lyr.bindTooltip(name, { permanent: true, direction: 'center', className: 'omp-label' })
-          } else if (name) {
+          if (name && !l.labels) {
             lyr.bindTooltip(name, { sticky: true, className: 'omp-tip' })
           }
           if (l.onClick && name) {
@@ -147,12 +166,29 @@ export default function MapView({ layers, legend, basemap }) {
         />
       )}
       {styled.map((l) => (l.data
-        ? <GeoJSON
-          key={`${l.key}:${idOf(l.data)}:${sigOf(l)}`}
-          data={l.data}
-          style={l.styled}
-          onEachFeature={l.onEach}
-        />
+        ? (
+          <Fragment key={`${l.key}:${idOf(l.data)}:${sigOf(l)}`}>
+            <GeoJSON
+              data={l.data}
+              style={l.styled}
+              onEachFeature={l.onEach}
+            />
+            {l.labelData && (
+              <GeoJSON
+                data={l.labelData}
+                pointToLayer={(feature, latlng) => L.marker(latlng, {
+                  icon: L.divIcon({
+                    className: 'omp-label-icon',
+                    html: escapeHtml(feature.properties.label),
+                    iconAnchor: [0, 0],
+                  }),
+                  interactive: false,
+                  keyboard: false,
+                })}
+              />
+            )}
+          </Fragment>
+        )
         : null))}
       <FitBounds geojson={primary?.data} focus={primary?.focus} />
       {legend.length > 0 && (

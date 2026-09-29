@@ -46,6 +46,17 @@ export default function LayersControl({
           <section>
             <h3>Base layer</h3>
             <ul>
+              <li>
+                <label>
+                  <input
+                    type="radio"
+                    name="base-layer"
+                    checked={!basemap}
+                    onChange={() => onBasemap(null)}
+                  />
+                  <span>None</span>
+                </label>
+              </li>
               {basemaps.map((b, i) => (
                 <Fragment key={b.id}>
                   {/* Providers are declared in runs, so a header is emitted

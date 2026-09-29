@@ -35,9 +35,22 @@ def stem_of(filename):
     return filename[:-len(EXT)] if filename.endswith(EXT) else filename
 
 
+def label_anchor(geometry):
+    """Anchor labels on the main polygon, not a stray multipart fragment."""
+    parts = list(geometry.geoms) if geometry.geom_type == "MultiPolygon" else [geometry]
+    main = max(parts, key=lambda part: part.area)
+    point = main.centroid
+    if not main.covers(point):
+        point = main.representative_point()
+    return point.x, point.y
+
+
 def simplify(path, tol, out):
     gdf = drop_disputed(gpd.read_file(path))
     gdf["geometry"] = gdf.geometry.simplify(tol, preserve_topology=True)
+    anchors = [label_anchor(geometry) for geometry in gdf.geometry]
+    gdf["label_lon"] = [point[0] for point in anchors]
+    gdf["label_lat"] = [point[1] for point in anchors]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     gdf.to_file(out, driver="GeoJSON", COORDINATE_PRECISION=PRECISION)
     return os.path.getsize(out), len(gdf)

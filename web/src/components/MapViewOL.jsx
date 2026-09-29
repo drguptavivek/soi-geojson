@@ -8,9 +8,9 @@ import VectorSource from 'ol/source/Vector'
 import XYZ from 'ol/source/XYZ'
 import GeoJSON from 'ol/format/GeoJSON'
 import { Style, Fill, Stroke, Text } from 'ol/style'
+import Point from 'ol/geom/Point'
 import { openlayersUrls } from '../config/basemaps'
 import { colorFor, fillFor } from '../config/palette'
-import 'ol/ol.css'
 
 /** Single-colour styling for the national context layers. */
 const STYLE = {
@@ -37,7 +37,17 @@ function baseStyle(kind, over) {
 function makeStyleFunction(kind, over) {
   const b = baseStyle(kind, over)
   const labelFor = (feature) => (over?.labels
-    ? new Text({ text: feature.get('ompName') || '', fill: new Fill({ color: '#0f172a' }) })
+    ? new Text({
+      text: feature.get('ompName') || '',
+      fill: new Fill({ color: '#0f172a' }),
+      geometry: () => {
+        const lon = Number(feature.get('label_lon'))
+        const lat = Number(feature.get('label_lat'))
+        return Number.isFinite(lon) && Number.isFinite(lat)
+          ? new Point([lon, lat])
+          : feature.getGeometry()
+      },
+    })
     : undefined)
   const flat = (feature) => new Style({
     stroke: new Stroke({ color: b.color, width: b.width, lineDash: b.dash }),
@@ -180,7 +190,11 @@ export default function MapViewOL({ layers, legend, basemap }) {
 
       const vector = new VectorLayer({
         source: new VectorSource({ features }),
-        style: makeStyleFunction(l.kind, { ...l.style, categorical: l.categorical }),
+        style: makeStyleFunction(l.kind, {
+          ...l.style,
+          categorical: l.categorical,
+          labels: l.labels,
+        }),
       })
       vector.set('ompKey', l.key)
       vector.set('ompData', l.data)

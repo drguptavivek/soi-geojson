@@ -211,13 +211,14 @@ html, body, #root { height: 100%; margin: 0; }
 .label-toggles input { margin: 0; accent-color: var(--accent); }
 
 /* ---- permanent polygon labels ---- */
-.leaflet-tooltip.omp-label {
+.leaflet-marker-icon.omp-label-icon {
+  width: max-content !important; height: auto !important;
+  margin-left: -50% !important; margin-top: -0.6em !important;
   background: transparent; border: 0; box-shadow: none;
   color: #0f172a; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif;
   text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff;
   white-space: nowrap; pointer-events: none;
 }
-.leaflet-tooltip.omp-label:before { display: none; }
 /* ---- crash fallback ---- */
 .crash {
   padding: 32px; font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; color: #0f172a;

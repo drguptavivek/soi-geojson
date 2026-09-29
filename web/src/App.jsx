@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import { useGeoJson } from './hooks/useGeoJson'
@@ -35,14 +35,11 @@ export default function App() {
   const [layersOpen, setLayersOpen] = useState(false)
 
   const basemaps = useMemo(() => availableBasemaps(), [])
-  const [basemapId, setBasemapId] = useState('osm')
+  const [basemapId, setBasemapId] = useState(null)
   const basemap = useMemo(
-    () => basemaps.find((b) => b.id === basemapId) ?? basemaps[0],
+    () => basemaps.find((b) => b.id === basemapId),
     [basemaps, basemapId],
   )
-  useEffect(() => {
-    if (!basemaps.some((b) => b.id === basemapId) && basemaps[0]) setBasemapId(basemaps[0].id)
-  }, [basemaps, basemapId])
 
   const { data: states } = useGeoJson('states.geojson')
   const { data: districtLayer, loading: dLoading } = useGeoJson(state?.file || null)
