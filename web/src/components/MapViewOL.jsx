@@ -89,18 +89,23 @@ export default function MapViewOL({ layers, legend, basemap }) {
     mapRef.current = map
 
     // Hover name, and click-to-drill, resolved by hit detection.
+    // evt.pixel is already relative to the map viewport, which shares its
+    // origin with .ol-wrap, so the tip can be positioned directly from it.
+    const hitAt = (evt) => {
+      if (!evt?.pixel || evt.pixel.length < 2) return null
+      let found = null
+      map.forEachFeatureAtPixel(evt.pixel, (f) => { found = f; return true })
+      return found
+    }
     const onMove = (evt) => {
-      let hit
-      map.forEachFeatureAtPixel(evt.pixel, (f) => { hit = f; return true })
-      if (!hit || hit.get('ompName') == null) { setTip(null); return }
-      // evt.pixel is already relative to the map viewport, which shares its
-      // origin with .ol-wrap, so the tip can be positioned directly from it.
-      setTip({ text: hit.get('ompName'), at: [evt.pixel[0], evt.pixel[1]] })
+      const hit = hitAt(evt)
+      const name = hit?.get('ompName')
+      if (!name) { setTip(null); return }
+      setTip({ text: name, at: [evt.pixel[0], evt.pixel[1]] })
     }
     const onOut = () => setTip(null)
     const onClick = (evt) => {
-      let hit
-      map.forEachFeatureAtPixel(evt.pixel, (f) => { hit = f; return true })
+      const hit = hitAt(evt)
       const cb = hit?.get('ompOnClick')
       if (cb) cb(hit.get('ompProps') || {})
     }
@@ -138,18 +143,22 @@ export default function MapViewOL({ layers, legend, basemap }) {
     if (!map) return
     const holder = layerRefs.current
 
-    for (const key of [...holder.keys()]) {
-      if (!layers.some((l) => l.key === key)) {
-        map.removeLayer(holder.get(key))
-        holder.delete(key)
+    // Rebuild only layers whose data or presentation changed -- re-parsing
+    // thousands of coordinates on every state change is far too slow.
+    // Ordering is fixed separately below, by re-adding the managed layers in
+    // sequence: insertAt(i + 1) with the *array* index cannot work, because the
+    // collection also holds the basemap and unchanged layers are not re-added,
+    // so the index can outrun the collection and Collection.insertAt throws.
+    const sig = (l) => JSON.stringify([l.categorical, l.style, l.labels, l.emphasis, l.nameKey])
+
+    for (const l of layers) {
+      if (!l.data) continue
+      const existing = holder.get(l.key)
+      if (existing && existing.get('ompData') === l.data && existing.get('ompSig') === sig(l)) {
+        continue
       }
-    }
+      if (existing) map.removeLayer(existing)
 
-    layers.forEach((l, i) => {
-      if (!l.data) return
-      if (holder.get(l.key)?.get('ompData') === l.data) return
-
-      const nameKey = l.nameKey || (l.kind === 'states' ? 'state_name' : `${l.kind}_name`)
       const features = new GeoJSON().readFeatures(l.data, {
         dataProjection: 'EPSG:4326',
         featureProjection: 'EPSG:4326',
@@ -157,26 +166,44 @@ export default function MapViewOL({ layers, legend, basemap }) {
       // Position within the group, so categorical colours line up with Leaflet.
       features.forEach((f, n) => {
         f.set('ompIndex', n)
-        f.set('ompName', f.get(nameKey) || null)
+        f.set('ompName', f.get(l.nameKey) || null)
         if (l.onClick) {
           f.set('ompOnClick', l.onClick)
           f.set('ompProps', {
             district_lgd: f.get('district_lgd'),
             district_name: f.get('district_name'),
+            subdistrict_lgd: f.get('subdistrict_lgd'),
+            subdistrict_name: f.get('subdistrict_name'),
           })
         }
       })
 
-      if (holder.get(l.key)) map.removeLayer(holder.get(l.key))
       const vector = new VectorLayer({
         source: new VectorSource({ features }),
         style: makeStyleFunction(l.kind, { ...l.style, categorical: l.categorical }),
       })
       vector.set('ompKey', l.key)
       vector.set('ompData', l.data)
-      map.getLayers().insertAt(i + 1, vector)
+      vector.set('ompSig', sig(l))
       holder.set(l.key, vector)
-    })
+    }
+
+    // Enforce general -> specific ordering, and drop anything no longer listed.
+    const wanted = layers.filter((l) => l.data).map((l) => holder.get(l.key)).filter(Boolean)
+    for (const layer of [...holder.values()]) {
+      if (!wanted.includes(layer)) {
+        map.removeLayer(layer)
+        holder.delete(layer.get('ompKey'))
+      }
+    }
+    // Re-order only when it is actually wrong: re-adding every layer on each
+    // run is pure churn and leaves the map fighting itself.
+    const inMap = map.getLayers().getArray().filter((l) => holder.get(l.get('ompKey')) === l)
+    const ordered = inMap.length === wanted.length && inMap.every((l, i) => l === wanted[i])
+    if (!ordered) {
+      for (const layer of wanted) map.getLayers().remove(layer)
+      for (const layer of wanted) map.addLayer(layer)
+    }
 
     // Frame the most specific layer, or a single feature when one is focused.
     const primary = layers.filter((l) => l.data).at(-1)
@@ -185,18 +212,26 @@ export default function MapViewOL({ layers, legend, basemap }) {
       if (src && !src.isEmpty()) {
         let feats = src.getFeatures()
         if (primary.focus) feats = feats.filter(primary.focus.matchesOL)
-        const extent = feats.length
-          ? feats.reduce((acc, f) => acc.concat(f.getGeometry().getExtent()), [])
-          : null
-        // view.fit() indexes 0..3, so a degenerate or non-finite extent (a
-        // zero-area or collapsed geometry) has to be rejected before it is
-        // passed, otherwise it throws and takes the map down.
-        const size = map.getSize() || [map.getTargetElement().clientWidth, map.getTargetElement().clientHeight]
-        const ok = Array.isArray(extent)
-          && extent.length === 4
-          && extent.every(Number.isFinite)
-          && extent[0] <= extent[2] && extent[1] <= extent[3]
-        if (ok && size[0] > 0 && size[1] > 0) {
+        // Union of the selected features' extents. Concatenating them would
+        // give 4*N numbers, which view.fit() then indexes as if it were 4.
+        let extent = null
+        for (const f of feats) {
+          const e = f.getGeometry()?.getExtent()
+          if (!e || !e.every(Number.isFinite)) continue
+          if (!extent) {
+            extent = e.slice()
+          } else {
+            extent[0] = Math.min(extent[0], e[0])
+            extent[1] = Math.min(extent[1], e[1])
+            extent[2] = Math.max(extent[2], e[2])
+            extent[3] = Math.max(extent[3], e[3])
+          }
+        }
+        const target = map.getTargetElement()
+        const size = (map.getSize() && map.getSize().length === 2
+          ? map.getSize()
+          : [target?.clientWidth ?? 0, target?.clientHeight ?? 0])
+        if (extent && extent.length === 4 && size[0] > 0 && size[1] > 0) {
           map.getView().fit(extent, {
             size,
             padding: [24, 24, 24, 24],
